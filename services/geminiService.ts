@@ -2,7 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import { FileData } from "../types";
 
 const processFileWithGemini = async (fileData: FileData): Promise<string> => {
-  const apiKey = process.env.API_KEY;
+  const apiKey = import.meta.env.VITE_GOOGLE_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY;
   
   if (!apiKey) {
     throw new Error("API Key is missing. Please check your environment configuration.");
