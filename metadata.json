@@ -1,0 +1,5 @@
+{
+  "name": "MathScan to LaTeX",
+  "description": "Convert images and PDFs containing math formulas into text with LaTeX formatting (${...}$) for easy pasting into Word.",
+  "requestFramePermissions": []
+}
