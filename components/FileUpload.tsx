@@ -1,5 +1,5 @@
-import React, { ChangeEvent, useState } from 'react';
-import { Upload, FileText, Image as ImageIcon, CloudUpload } from 'lucide-react';
+import React, { ChangeEvent, useState, useEffect } from 'react';
+import { FileText, Image as ImageIcon, CloudUpload, ClipboardPaste } from 'lucide-react';
 import { FileData } from '../types';
 
 interface FileUploadProps {
@@ -10,6 +10,35 @@ interface FileUploadProps {
 const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isLoading }) => {
   const [isDragOver, setIsDragOver] = useState(false);
 
+  // Handle Paste Event (Ctrl + V)
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      if (isLoading) return;
+      
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          e.preventDefault();
+          const file = items[i].getAsFile();
+          if (file) {
+            // Rename file to make it meaningful
+            const renamedFile = new File([file], `paste_${new Date().getTime()}.png`, { type: file.type });
+            processFile(renamedFile);
+          }
+          break;
+        }
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => {
+      window.removeEventListener('paste', handlePaste);
+    };
+  }, [isLoading]);
+
+  // Handle Drag & Drop / File Input
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     processFile(file);
@@ -60,42 +89,44 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isLoading }) => {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         className={`
-          relative flex flex-col items-center justify-center w-full h-64 lg:h-80
-          border-3 border-dashed rounded-2xl cursor-pointer 
-          transition-all duration-300 ease-in-out group overflow-hidden
+          relative flex-1 flex flex-col items-center justify-center w-full min-h-[300px]
+          border-3 border-dashed rounded-xl cursor-pointer 
+          transition-all duration-300 ease-out group overflow-hidden
           ${isLoading 
             ? 'bg-gray-50 border-gray-200 cursor-not-allowed opacity-60' 
             : isDragOver
-              ? 'bg-indigo-50 border-indigo-500 scale-[1.02] shadow-xl'
-              : 'bg-white border-gray-300 hover:border-indigo-400 hover:bg-slate-50 hover:shadow-md'
+              ? 'bg-indigo-50/50 border-indigo-400 scale-[0.99] shadow-inner'
+              : 'bg-white border-slate-200 hover:border-indigo-300 hover:bg-slate-50/50'
           }
         `}
       >
         {/* Background Decorative Circles */}
-        <div className={`absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-indigo-100 rounded-full blur-3xl opacity-50 transition-all ${isDragOver ? 'scale-150' : 'scale-100'}`}></div>
-        <div className={`absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-blue-100 rounded-full blur-3xl opacity-50 transition-all ${isDragOver ? 'scale-150' : 'scale-100'}`}></div>
+        <div className={`absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-indigo-50 rounded-full blur-3xl opacity-0 group-hover:opacity-50 transition-opacity duration-700`}></div>
+        <div className={`absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-blue-50 rounded-full blur-3xl opacity-0 group-hover:opacity-50 transition-opacity duration-700`}></div>
 
         <div className="relative z-10 flex flex-col items-center justify-center p-6 text-center">
           <div className={`
-            p-4 rounded-full mb-4 shadow-sm transition-all duration-300
-            ${isDragOver ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-500 group-hover:bg-indigo-50 group-hover:text-indigo-500'}
+            p-5 rounded-2xl mb-5 shadow-sm transition-all duration-300 transform
+            ${isDragOver 
+                ? 'bg-indigo-100 text-indigo-600 scale-110' 
+                : 'bg-white border border-slate-100 text-slate-400 group-hover:text-indigo-500 group-hover:scale-110 group-hover:border-indigo-100 group-hover:shadow-md'
+            }
           `}>
              <CloudUpload className={`w-10 h-10 ${isLoading ? 'animate-pulse' : ''}`} />
           </div>
           
-          <h3 className="mb-2 text-lg font-bold text-gray-700 group-hover:text-indigo-700 transition-colors">
-            {isDragOver ? 'Thả file vào đây ngay!' : 'Tải lên đề bài'}
+          <h3 className="mb-2 text-lg font-bold text-slate-700 group-hover:text-indigo-700 transition-colors">
+            {isDragOver ? 'Thả file vào đây!' : 'Tải lên đề bài'}
           </h3>
-          <p className="mb-4 text-sm text-gray-500 max-w-xs">
-            Kéo thả hoặc nhấn để chọn file <br/>
-            <span className="text-xs text-gray-400">(Hỗ trợ JPG, PNG & PDF)</span>
+          <p className="mb-6 text-sm text-slate-500 leading-relaxed max-w-[240px]">
+            Kéo thả, chọn file hoặc nhấn <kbd className="px-2 py-1 rounded-md bg-white text-slate-600 font-bold text-xs border border-slate-200 shadow-sm mx-1">Ctrl + V</kbd> để dán ảnh trực tiếp
           </p>
           
-          <div className="flex gap-3 mt-2">
-             <span className="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full border border-blue-100">
-                <ImageIcon className="w-3 h-3 mr-1.5" /> Ảnh
+          <div className="flex gap-2 justify-center">
+             <span className="inline-flex items-center px-3 py-1 bg-slate-50 text-slate-600 text-[11px] font-semibold rounded-full border border-slate-100 group-hover:border-blue-200 group-hover:bg-blue-50 group-hover:text-blue-700 transition-colors">
+                <ImageIcon className="w-3 h-3 mr-1.5" /> PNG/JPG
              </span>
-             <span className="inline-flex items-center px-2.5 py-1 bg-red-50 text-red-700 text-xs font-medium rounded-full border border-red-100">
+             <span className="inline-flex items-center px-3 py-1 bg-slate-50 text-slate-600 text-[11px] font-semibold rounded-full border border-slate-100 group-hover:border-red-200 group-hover:bg-red-50 group-hover:text-red-700 transition-colors">
                 <FileText className="w-3 h-3 mr-1.5" /> PDF
              </span>
           </div>
