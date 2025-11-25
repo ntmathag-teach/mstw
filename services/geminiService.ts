@@ -64,6 +64,12 @@ const processFileWithGemini = async (fileData: FileData): Promise<string> => {
                    - Các ký hiệu tên hình như S.ABCD, A'B'C', (SAB)... phải được coi là công thức toán.
                    - Ví dụ: \`\${ S.ABCD }\$\`, \`\${ (SAB) }\$\`.
 
+                F. SỐ ÂM (NEGATIVE NUMBERS):
+                   - Các số âm đứng riêng lẻ (đặc biệt trong các đáp án A, B, C, D) PHẢI được đóng gói thành công thức toán để dấu trừ hiển thị đúng là dấu trừ toán học.
+                   - Ví dụ: thay vì viết "-2", hãy viết \`\${ -2 }\$\`.
+                   - Ví dụ: A. \`\${ -5 }\$\`
+                   - Áp dụng cho cả phân số âm, số thập phân âm.
+
               3. XỬ LÝ HÌNH VẼ, ĐỒ THỊ, BẢNG BIẾN THIÊN:
                  - Khi gặp hình vẽ, đồ thị hoặc bảng biến thiên (nơi chứa thông tin dạng hình ảnh không thể chuyển thành text đơn thuần), hãy chèn tag sau vào đúng vị trí đó:
                  \`[[CHÈN_HÌNH]]\`
