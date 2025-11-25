@@ -76,6 +76,12 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ content, fileData }) => {
     // REMOVE BOLD MARKDOWN (**text**) specifically for "Câu X" or globally to be safe for Word copy
     text = text.replace(/\*\*/g, '');
 
+    // NUCLEAR OPTION: Remove ALL backticks (`)
+    text = text.replace(/`/g, '');
+
+    // AUTO-REPAIR: Fix missing closing $ (e.g., "${ x=1 }" -> "${ x=1 }$")
+    text = text.replace(/(\$\{(?:[^{}]|\{[^{}]*\})*\})(?!\$)/g, '$1$');
+
     // Find all placeholders
     const indices: number[] = [];
     let match;
@@ -357,52 +363,58 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ content, fileData }) => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden relative transition-all">
+    <div className="flex flex-col h-full bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden relative transition-all">
       
       {/* Batch Crop Banner */}
       {totalPlaceholders > 0 && (
-          <div className="bg-gradient-to-r from-indigo-50 to-blue-50 px-4 py-3 border-b border-indigo-100 flex items-center justify-between">
-              <div className="text-sm text-indigo-800 flex items-center gap-2">
-                 <div className="bg-white p-1 rounded-md shadow-sm text-indigo-600">
+          <div className="bg-gradient-to-r from-indigo-50 to-blue-50 px-5 py-3 border-b border-indigo-100 flex items-center justify-between">
+              <div className="text-sm text-indigo-900 flex items-center gap-3">
+                 <div className="bg-white p-1.5 rounded-lg shadow-sm text-indigo-600 ring-1 ring-indigo-50">
                     <Sparkles className="w-4 h-4" />
                  </div>
-                 <span>Phát hiện <b>{totalPlaceholders}</b> vị trí cần chèn hình.</span>
-                 <span className="text-xs font-semibold px-2 py-0.5 bg-indigo-200 text-indigo-800 rounded-full">
+                 <div className="flex flex-col">
+                     <span className="font-semibold">Phát hiện hình ảnh</span>
+                     <span className="text-xs text-indigo-600/80">Cần chèn {totalPlaceholders} hình vào văn bản</span>
+                 </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                 <span className="text-xs font-bold text-indigo-800 bg-white/60 px-2 py-1 rounded-md border border-indigo-100">
                     {croppedImages.size} / {totalPlaceholders}
                  </span>
+                 <button 
+                    onClick={startBatchCropping}
+                    className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold shadow-sm shadow-indigo-200 transition-all hover:-translate-y-0.5 hover:shadow-md flex items-center gap-1.5"
+                >
+                    {croppedImages.size === 0 ? "Bắt đầu cắt" : "Tiếp tục"}
+                    <ChevronRight className="w-3 h-3" />
+                </button>
               </div>
-              <button 
-                onClick={startBatchCropping}
-                className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-semibold shadow-sm transition-all hover:shadow-md flex items-center gap-1.5"
-              >
-                  {croppedImages.size === 0 ? "Bắt đầu cắt" : "Tiếp tục cắt"}
-                  <ChevronRight className="w-3 h-3" />
-              </button>
           </div>
       )}
 
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
-        <div className="flex bg-gray-100/80 rounded-lg p-1 gap-1">
+      <div className="flex items-center justify-between px-5 py-3 bg-white border-b border-slate-100/80 sticky top-0 z-10 backdrop-blur-sm bg-white/80">
+        <div className="flex bg-slate-100/80 rounded-xl p-1 gap-1">
             <button
                 onClick={() => setActiveTab('raw')}
                 className={`
-                    flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all duration-200
+                    flex items-center gap-2 px-4 py-1.5 text-sm font-semibold rounded-lg transition-all duration-300
                     ${activeTab === 'raw' 
-                        ? 'bg-white text-blue-700 shadow-sm ring-1 ring-black/5' 
-                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+                        ? 'bg-white text-slate-800 shadow-sm ring-1 ring-black/5' 
+                        : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
                     }
                 `}
             >
-                <Code className="w-4 h-4" /> Word
+                <Code className="w-4 h-4" /> Word Source
             </button>
             <button
                 onClick={() => setActiveTab('preview')}
                 className={`
-                    flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all duration-200
+                    flex items-center gap-2 px-4 py-1.5 text-sm font-semibold rounded-lg transition-all duration-300
                     ${activeTab === 'preview' 
                         ? 'bg-white text-blue-700 shadow-sm ring-1 ring-black/5' 
-                        : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+                        : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
                     }
                 `}
             >
@@ -413,10 +425,10 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ content, fileData }) => {
         <button
           onClick={handleSmartCopy}
           className={`
-            flex items-center gap-2 px-5 py-2 text-sm font-bold rounded-lg transition-all shadow-md hover:shadow-lg active:scale-95
+            flex items-center gap-2 px-5 py-2 text-sm font-bold rounded-xl transition-all shadow-sm hover:shadow-lg active:scale-95 duration-300
             ${copied 
-                ? 'bg-green-500 text-white' 
-                : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white'
+                ? 'bg-green-500 text-white translate-y-0.5' 
+                : 'bg-slate-900 text-white hover:bg-slate-800'
             }
           `}
         >
@@ -426,27 +438,27 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ content, fileData }) => {
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 relative overflow-hidden bg-white">
+      <div className="flex-1 relative overflow-hidden bg-white group">
         {activeTab === 'raw' ? (
             <textarea
-                className="w-full h-full p-6 font-mono text-sm text-slate-700 bg-white resize-none focus:outline-none leading-relaxed"
+                className="w-full h-full p-8 font-mono text-sm text-slate-700 bg-white resize-none focus:outline-none leading-relaxed selection:bg-blue-100 custom-scrollbar"
                 value={cleanedTextBase} 
                 readOnly
                 spellCheck={false}
             />
         ) : (
-          <div className="w-full h-full p-8 overflow-auto relative bg-slate-50/30">
-             <div className="prose prose-slate prose-lg max-w-none prose-headings:text-indigo-900 prose-p:text-slate-700">
+          <div className="w-full h-full p-8 overflow-auto relative bg-slate-50/30 custom-scrollbar">
+             <div className="prose prose-slate prose-lg max-w-none prose-headings:text-indigo-900 prose-headings:font-bold prose-p:text-slate-700 prose-p:leading-8">
                 <ReactMarkdown
                     remarkPlugins={[remarkMath]}
                     rehypePlugins={[rehypeKatex]}
                     components={{
-                        p: ({node, ...props}) => <p className="mb-4 leading-relaxed" {...props} />,
+                        p: ({node, ...props}) => <p className="mb-6" {...props} />,
                         img: ({node, ...props}) => (
-                            <span className="block my-6 border-2 border-dashed border-indigo-200 rounded-xl p-4 bg-white text-center shadow-sm">
+                            <span className="block my-8 border-2 border-dashed border-indigo-200/60 rounded-xl p-4 bg-white/50 text-center shadow-sm hover:shadow-md transition-shadow">
                                 <img 
                                     {...props} 
-                                    className="max-w-full h-auto mx-auto shadow-md rounded-lg" 
+                                    className="max-w-full h-auto mx-auto shadow-sm rounded-lg" 
                                     alt="Được trích xuất từ ảnh gốc"
                                 />
                             </span>
@@ -462,19 +474,19 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ content, fileData }) => {
 
       {/* CROP MODAL OVERLAY */}
       {isCropModalOpen && fileData && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] flex flex-col overflow-hidden ring-1 ring-white/10">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] flex flex-col overflow-hidden ring-1 ring-white/10 animate-in zoom-in-95 duration-300">
                   
                   {/* Modal Header */}
                   <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white flex-none">
                       <div className="flex items-center gap-4">
-                          <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600">
+                          <div className="bg-indigo-50 p-2.5 rounded-xl text-indigo-600 border border-indigo-100">
                             <Scissors className="w-6 h-6" />
                           </div>
                           <div>
                               <h3 className="text-lg font-bold text-gray-900">Cắt ảnh thủ công</h3>
                               <div className="flex items-center gap-2 text-sm text-gray-500">
-                                  Vị trí: <span className="font-bold text-indigo-600 px-2 py-0.5 bg-indigo-50 rounded">#{currentCropIndex + 1}</span> 
+                                  Vị trí: <span className="font-bold text-indigo-600 px-2 py-0.5 bg-indigo-50 rounded-md border border-indigo-100">#{currentCropIndex + 1}</span> 
                                   <span>trong tổng số {totalPlaceholders}</span>
                               </div>
                           </div>
@@ -483,21 +495,21 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ content, fileData }) => {
                       <div className="flex items-center gap-4">
                            {/* PDF Pagination Controls */}
                            {fileData.mimeType === 'application/pdf' && (
-                              <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-lg p-1 mr-4">
+                              <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg p-1 mr-4 shadow-sm">
                                   <button 
                                     onClick={() => changePdfPage(-1)}
                                     disabled={pdfPageNum <= 1 || isPdfLoading}
-                                    className="p-1.5 hover:bg-white hover:shadow-sm rounded transition-all disabled:opacity-30 disabled:hover:shadow-none"
+                                    className="p-1.5 hover:bg-gray-100 rounded-md transition-all disabled:opacity-30"
                                   >
                                       <ChevronLeft className="w-4 h-4" />
                                   </button>
-                                  <span className="text-xs font-semibold text-gray-700 px-3 min-w-[80px] text-center">
+                                  <span className="text-xs font-bold text-gray-700 px-3 min-w-[90px] text-center">
                                       Trang {pdfPageNum} / {pdfTotalPages}
                                   </span>
                                   <button 
                                     onClick={() => changePdfPage(1)}
                                     disabled={pdfPageNum >= pdfTotalPages || isPdfLoading}
-                                    className="p-1.5 hover:bg-white hover:shadow-sm rounded transition-all disabled:opacity-30 disabled:hover:shadow-none"
+                                    className="p-1.5 hover:bg-gray-100 rounded-md transition-all disabled:opacity-30"
                                   >
                                       <ChevronRight className="w-4 h-4" />
                                   </button>
@@ -506,22 +518,22 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ content, fileData }) => {
 
                            <button 
                              onClick={() => setIsCropModalOpen(false)}
-                             className="p-2 hover:bg-red-50 hover:text-red-500 rounded-full transition-colors"
+                             className="p-2 hover:bg-red-50 hover:text-red-500 rounded-full transition-colors border border-transparent hover:border-red-100"
                            >
-                               <X className="w-6 h-6 text-gray-400" />
+                               <X className="w-6 h-6 text-gray-400 hover:text-red-500" />
                            </button>
                       </div>
                   </div>
 
                   {/* Modal Body (Canvas) */}
-                  <div className="flex-1 overflow-auto bg-slate-900 flex justify-center relative p-8 select-none">
+                  <div className="flex-1 overflow-auto bg-slate-900 flex justify-center relative p-8 select-none custom-scrollbar">
                       {isPdfLoading ? (
                           <div className="flex flex-col items-center justify-center text-white/80">
                               <Loader2 className="w-12 h-12 animate-spin mb-4 text-indigo-400" />
                               <p className="font-medium text-lg">Đang render trang PDF...</p>
                           </div>
                       ) : (
-                        <div className="relative shadow-2xl ring-4 ring-black/20 inline-block rounded-sm overflow-hidden bg-white">
+                        <div className="relative shadow-2xl ring-8 ring-black/20 inline-block rounded-lg overflow-hidden bg-white">
                             {cropImageSrc && (
                                 <>
                                     <img 
@@ -551,7 +563,7 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ content, fileData }) => {
                   <div className="px-8 py-5 border-t border-gray-100 bg-white flex justify-between items-center flex-none">
                        <button 
                           onClick={handleSkip}
-                          className="flex items-center px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors text-sm font-medium border border-transparent hover:border-slate-200"
+                          className="flex items-center px-5 py-2.5 text-slate-500 hover:bg-slate-50 hover:text-slate-700 rounded-xl transition-colors text-sm font-semibold border border-transparent hover:border-slate-200"
                        >
                            <SkipForward className="w-4 h-4 mr-2" />
                            Bỏ qua hình này
@@ -569,10 +581,10 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ content, fileData }) => {
                              onClick={confirmCrop}
                              disabled={!selection}
                              className={`
-                                flex items-center px-8 py-2.5 rounded-xl transition-all font-bold shadow-lg
+                                flex items-center px-8 py-3 rounded-xl transition-all font-bold shadow-lg
                                 ${selection 
-                                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white hover:scale-105 active:scale-95' 
-                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'
+                                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white hover:scale-105 active:scale-95 shadow-blue-500/30' 
+                                    : 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none border border-gray-200'
                                 }
                              `}
                            >
