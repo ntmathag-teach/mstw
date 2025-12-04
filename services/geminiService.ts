@@ -70,10 +70,16 @@ const processFileWithGemini = async (fileData: FileData): Promise<string> => {
                    - Ví dụ: A. \`\${ -5 }\$\`
                    - Áp dụng cho cả phân số âm, số thập phân âm.
 
-              3. XỬ LÝ HÌNH VẼ, ĐỒ THỊ, BẢNG BIẾN THIÊN:
-                 - Khi gặp hình vẽ, đồ thị hoặc bảng biến thiên (nơi chứa thông tin dạng hình ảnh không thể chuyển thành text đơn thuần), hãy chèn tag sau vào đúng vị trí đó:
+              3. XỬ LÝ HÌNH VẼ, ĐỒ THỊ VÀ BẢNG BIỂU (QUAN TRỌNG):
+                 - Khi gặp:
+                   + Hình vẽ hình học
+                   + Đồ thị hàm số
+                   + Bảng biến thiên
+                   + BẢNG SỐ LIỆU / BẢNG THỐNG KÊ (TABLE)
+                 - TUYỆT ĐỐI KHÔNG cố gắng chuyển đổi thành text hay Markdown Table.
+                 - HÃY chèn tag sau vào đúng vị trí đó để người dùng cắt ảnh:
                  \`[[CHÈN_HÌNH]]\`
-                 - Không cần mô tả hình, chỉ cần đặt tag để người dùng sau này chèn ảnh vào.
+                 - Nhắc lại: Bảng biểu (Table) cũng coi là hình ảnh.
 
               4. ĐỊNH DẠNG:
                  - Giữ nguyên cấu trúc Câu 1, Câu 2...
