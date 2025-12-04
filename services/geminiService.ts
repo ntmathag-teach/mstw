@@ -33,8 +33,9 @@ const processFileWithGemini = async (fileData: FileData): Promise<string> => {
               
               2. XỬ LÝ CÔNG THỨC TOÁN (Latex):
                  - Bắt buộc đặt trong: \`\${\` công thức \`}\$\`
-                 - Ví dụ: \`\${ x^2 + 1 = 0 }\$\`
+                 - Ví dụ: \`\${ x^2+1=0 }\$\`
                  - TUYỆT ĐỐI KHÔNG dùng dấu backtick (\`) bao quanh \`\${\` và \`}\$\`.
+                 - Tuyệt đối không cách ra một khoảng. Ví dụ phải viết là: \`\${ x^2+1 = 0 }\$\` thay vì \`\${ x^2 + 1 = 0 }\$\`
                  
                  * QUY TẮC ĐẶC BIỆT CHO WORD (BẮT BUỘC TUÂN THỦ):
                  
