@@ -1,16 +1,20 @@
 import React, { useState } from 'react';
-import { ProcessingStatus, FileData } from './types';
+import { ProcessingStatus, FileData, ProcessingMode, ProcessingConfig } from './types';
 import { geminiService } from './services/geminiService';
 import FileUpload from './components/FileUpload';
 import FilePreview from './components/FilePreview';
 import ResultDisplay from './components/ResultDisplay';
-import { Loader2, Calculator, AlertCircle, Sparkles, FileText, ArrowRight, RefreshCw, ChevronRight } from 'lucide-react';
+import { Loader2, Calculator, AlertCircle, Sparkles, FileText, ArrowRight, RefreshCw, ChevronRight, Copy, FileEdit } from 'lucide-react';
 
 const App: React.FC = () => {
   const [fileData, setFileData] = useState<FileData | null>(null);
   const [status, setStatus] = useState<ProcessingStatus>(ProcessingStatus.IDLE);
   const [result, setResult] = useState<string>('');
   const [error, setError] = useState<string>('');
+  
+  // New state for upgrade
+  const [mode, setMode] = useState<ProcessingMode>(ProcessingMode.CONVERT);
+  const [cloneCount, setCloneCount] = useState<number>(3);
 
   const handleFileSelect = (data: FileData) => {
     setFileData(data);
@@ -32,8 +36,13 @@ const App: React.FC = () => {
     setStatus(ProcessingStatus.PROCESSING);
     setError('');
 
+    const config: ProcessingConfig = {
+      mode,
+      cloneCount: mode === ProcessingMode.CLONE ? cloneCount : undefined
+    };
+
     try {
-      const text = await geminiService.processFile(fileData);
+      const text = await geminiService.processFile(fileData, config);
       setResult(text);
       setStatus(ProcessingStatus.SUCCESS);
     } catch (err: any) {
@@ -54,7 +63,7 @@ const App: React.FC = () => {
             </div>
             <div>
                 <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-800 to-slate-600">MathScan</h1>
-                <p className="text-xs text-slate-500 font-medium tracking-wide">AI OCR CONVERTER</p>
+                <p className="text-xs text-slate-500 font-medium tracking-wide">AI OCR & CLONE</p>
             </div>
           </div>
           
@@ -64,7 +73,7 @@ const App: React.FC = () => {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                 </span>
-               <span className="text-xs font-semibold text-slate-600">Gemini 2.5 Flash</span>
+               <span className="text-xs font-semibold text-slate-600">Gemini 3.0 Flash</span>
             </div>
           </div>
         </div>
@@ -77,7 +86,7 @@ const App: React.FC = () => {
           <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-6 h-full overflow-y-auto pr-1 custom-scrollbar pb-10">
             
             {/* FRAME 1: DOCUMENT / UPLOAD AREA */}
-            <div className={`bg-white rounded-2xl shadow-xl shadow-slate-200/60 border border-white p-1 flex flex-col ${!fileData ? 'flex-1 min-h-[400px]' : 'h-[500px]'} relative overflow-hidden transition-all duration-500 ease-in-out hover:shadow-2xl hover:shadow-indigo-100/50`}>
+            <div className={`bg-white rounded-2xl shadow-xl shadow-slate-200/60 border border-white p-1 flex flex-col ${!fileData ? 'flex-1 min-h-[400px]' : 'h-[450px]'} relative overflow-hidden transition-all duration-500 ease-in-out hover:shadow-2xl hover:shadow-indigo-100/50`}>
                <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-indigo-50/50 to-transparent rounded-bl-[100px] -mr-10 -mt-10 pointer-events-none"></div>
                
                <div className="p-5 pb-2 flex items-center gap-3 relative z-10 flex-none">
@@ -94,47 +103,80 @@ const App: React.FC = () => {
                </div>
             </div>
 
-            {/* FRAME 2: CONTROL PANEL (Only visible if file uploaded) */}
+            {/* FRAME 2: CONFIGURATION (Only visible if file uploaded) */}
             {fileData && (
                 <div className="bg-white rounded-2xl shadow-lg shadow-indigo-100/50 border border-indigo-50/50 p-5 animate-in slide-in-from-bottom-6 duration-500 fill-mode-backwards">
                      <div className="flex items-center gap-3 mb-4">
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-50 to-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center font-bold text-sm shadow-sm">2</div>
-                        <h2 className="text-lg font-bold text-slate-800">Hành động</h2>
+                        <h2 className="text-lg font-bold text-slate-800">Cấu hình xử lý</h2>
                      </div>
 
-                     <div className="grid grid-cols-2 gap-3">
-                        {/* Start Button */}
-                        {status !== ProcessingStatus.PROCESSING && status !== ProcessingStatus.SUCCESS ? (
+                     <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl border border-slate-200">
                             <button
-                                onClick={handleProcess}
-                                className="col-span-2 py-4 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-3 group relative overflow-hidden"
+                                onClick={() => setMode(ProcessingMode.CONVERT)}
+                                className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-sm font-bold transition-all ${mode === ProcessingMode.CONVERT ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                             >
-                                <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out transform skew-x-12"></div>
-                                <div className="bg-white/20 p-1.5 rounded-lg group-hover:rotate-12 transition-transform duration-300">
-                                    <Sparkles className="w-5 h-5" />
+                                <FileEdit className="w-4 h-4" />
+                                Chuyển Word
+                            </button>
+                            <button
+                                onClick={() => setMode(ProcessingMode.CLONE)}
+                                className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-sm font-bold transition-all ${mode === ProcessingMode.CLONE ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                <Copy className="w-4 h-4" />
+                                Tạo tương tự
+                            </button>
+                        </div>
+
+                        {mode === ProcessingMode.CLONE && (
+                            <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 animate-in fade-in slide-in-from-top-2">
+                                <label className="block text-xs font-bold text-indigo-700 uppercase tracking-wider mb-2">Số lượng câu muốn tạo</label>
+                                <div className="flex items-center gap-4">
+                                    <input 
+                                        type="range" 
+                                        min="1" 
+                                        max="10" 
+                                        value={cloneCount} 
+                                        onChange={(e) => setCloneCount(parseInt(e.target.value))}
+                                        className="flex-1 accent-indigo-600 h-2 bg-indigo-100 rounded-lg appearance-none cursor-pointer"
+                                    />
+                                    <span className="w-10 h-10 flex items-center justify-center bg-white border border-indigo-200 rounded-lg font-bold text-indigo-600 shadow-sm">
+                                        {cloneCount}
+                                    </span>
                                 </div>
-                                <span className="text-lg tracking-wide">Bắt đầu chuyển đổi</span>
-                                <ChevronRight className="w-5 h-5 ml-auto opacity-70 group-hover:translate-x-1 transition-transform" />
-                            </button>
-                        ) : status === ProcessingStatus.SUCCESS ? (
+                                <p className="text-[10px] text-indigo-500 mt-2 italic">* AI sẽ tạo các câu hỏi có cùng mức độ nhận thức và dạng toán.</p>
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-3 pt-2">
+                            {/* Start Button */}
+                            {status !== ProcessingStatus.PROCESSING && (
+                                <button
+                                    onClick={handleProcess}
+                                    className="col-span-2 py-4 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/40 hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center gap-3 group relative overflow-hidden"
+                                >
+                                    <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out transform skew-x-12"></div>
+                                    <div className="bg-white/20 p-1.5 rounded-lg group-hover:rotate-12 transition-transform duration-300">
+                                        <Sparkles className="w-5 h-5" />
+                                    </div>
+                                    <span className="text-lg tracking-wide">
+                                        {mode === ProcessingMode.CONVERT ? 'Bắt đầu chuyển đổi' : 'Bắt đầu tạo câu hỏi'}
+                                    </span>
+                                    <ChevronRight className="w-5 h-5 ml-auto opacity-70 group-hover:translate-x-1 transition-transform" />
+                                </button>
+                            )}
+                            
+                            {/* Reset Button */}
                             <button
-                                onClick={handleProcess}
-                                className="col-span-2 py-3 px-6 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold rounded-xl border border-emerald-200 transition-all flex items-center justify-center gap-2 group"
+                                onClick={handleClearFile}
+                                className={`py-3 px-4 bg-white border border-slate-200 text-slate-600 hover:border-red-200 hover:bg-red-50 hover:text-red-600 font-medium rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95 ${status === ProcessingStatus.PROCESSING ? 'col-span-2' : 'col-span-2'}`}
+                                disabled={status === ProcessingStatus.PROCESSING}
                             >
-                                <RefreshCw className="w-5 h-5 group-hover:rotate-180 transition-transform duration-500" />
-                                Chuyển đổi lại
+                                <RefreshCw className={`w-4 h-4 ${status === ProcessingStatus.PROCESSING ? 'animate-spin' : ''}`} />
+                                {status === ProcessingStatus.PROCESSING ? 'Đang xử lý...' : 'Chọn tài liệu khác'}
                             </button>
-                        ) : null}
-                        
-                        {/* Reset Button */}
-                        <button
-                            onClick={handleClearFile}
-                            className={`py-3 px-4 bg-white border border-slate-200 text-slate-600 hover:border-red-200 hover:bg-red-50 hover:text-red-600 font-medium rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95 ${status === ProcessingStatus.PROCESSING ? 'col-span-2' : 'col-span-2'}`}
-                            disabled={status === ProcessingStatus.PROCESSING}
-                        >
-                            <RefreshCw className={`w-4 h-4 ${status === ProcessingStatus.PROCESSING ? 'animate-spin' : ''}`} />
-                            {status === ProcessingStatus.PROCESSING ? 'Đang xử lý...' : 'Chọn tài liệu khác'}
-                        </button>
+                        </div>
                      </div>
                 </div>
             )}
@@ -174,7 +216,9 @@ const App: React.FC = () => {
                      <div className="flex items-center gap-3">
                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-50 to-teal-50 text-emerald-600 border border-emerald-100 flex items-center justify-center font-bold text-sm shadow-sm">3</div>
                          <div>
-                             <h2 className="text-lg font-bold text-slate-800">Kết quả đầu ra</h2>
+                             <h2 className="text-lg font-bold text-slate-800">
+                                {mode === ProcessingMode.CONVERT ? 'Kết quả chuyển đổi' : 'Câu hỏi tương tự'}
+                             </h2>
                          </div>
                      </div>
                      {status === ProcessingStatus.SUCCESS && (
