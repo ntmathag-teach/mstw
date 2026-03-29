@@ -1,3 +1,13 @@
+export enum ProcessingMode {
+  CONVERT = 'CONVERT',
+  CLONE = 'CLONE',
+}
+
+export interface ProcessingConfig {
+  mode: ProcessingMode;
+  cloneCount?: number;
+}
+
 export interface FileData {
   file: File;
   previewUrl: string;
