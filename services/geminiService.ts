@@ -2,10 +2,11 @@ import { GoogleGenAI } from "@google/genai";
 import { FileData, ProcessingConfig, ProcessingMode } from "../types";
 
 const processFileWithGemini = async (fileData: FileData, config: ProcessingConfig): Promise<string> => {
-  const apiKey = process.env.API_KEY;
+  // Sử dụng import.meta.env cho các dự án Vite khi chạy ở Client-side
+  const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
   
   if (!apiKey) {
-    throw new Error("API Key is missing. Please check your environment configuration.");
+    throw new Error("API Key (VITE_GOOGLE_API_KEY) bị thiếu. Vui lòng kiểm tra cấu hình Environment Variables trên Vercel.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
