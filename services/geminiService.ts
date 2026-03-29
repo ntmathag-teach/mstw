@@ -1,8 +1,8 @@
 import { GoogleGenAI } from "@google/genai";
-import { FileData } from "../types";
+import { FileData, ProcessingConfig, ProcessingMode } from "../types";
 
-const processFileWithGemini = async (fileData: FileData): Promise<string> => {
-  const apiKey = import.meta.env.VITE_GOOGLE_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY;
+const processFileWithGemini = async (fileData: FileData, config: ProcessingConfig): Promise<string> => {
+  const apiKey = process.env.API_KEY;
   
   if (!apiKey) {
     throw new Error("API Key is missing. Please check your environment configuration.");
@@ -13,9 +13,49 @@ const processFileWithGemini = async (fileData: FileData): Promise<string> => {
   // Remove the data URL prefix (e.g., "data:image/png;base64,") to get raw base64
   const base64Data = fileData.base64.split(',')[1];
 
+  const isCloneMode = config.mode === ProcessingMode.CLONE;
+  const cloneCount = config.cloneCount || 1;
+
+  const systemPrompt = `
+    Bạn là công cụ AI chuyên nghiệp hỗ trợ giáo viên Toán.
+    
+    NHIỆM VỤ CHÍNH: ${isCloneMode ? `Tạo ${cloneCount} câu hỏi tương tự từ tài liệu nguồn.` : 'Chuyển đổi toàn bộ nội dung ảnh sang văn bản Word chuẩn.'}
+
+    ${isCloneMode ? `
+    QUY TẮC TẠO CÂU HỎI TƯƠNG TỰ (CLONE):
+    1. Phân tích sâu câu hỏi gốc: Xác định chủ đề (ví dụ: Tích phân), đơn vị kiến thức (ví dụ: Tính chất tích phân), và mức độ nhận thức (Nhận biết/Thông hiểu/Vận dụng).
+    2. Sáng tạo đa dạng (BẮT BUỘC): 
+       - TUYỆT ĐỐI KHÔNG chỉ thay đổi số (hệ số, cận) trong cùng một công thức của câu gốc cho tất cả các câu clone.
+       - Hãy khai thác các TÍNH CHẤT KHÁC NHAU của cùng đơn vị kiến thức đó.
+       - Ví dụ với Tích phân xác định (Nhận biết):
+         + Câu 1: Dùng tính chất nhân hằng số: \${ \int kf(x) }\$.
+         + Câu 2: Dùng tính chất cộng/trừ: \${ \int [f(x) \pm g(x)] }\$.
+         + Câu 3: Dùng tính chất tách đoạn: \${ \int_a^c = \int_a^b + \int_b^c }\$.
+         + Câu 4: Dùng tính chất đảo cận: \${ \int_a^b = -\int_b^a }\$.
+       - Thay đổi đối tượng: Nếu câu gốc dùng hàm f(x), câu sau có thể dùng biến t, hoặc kết hợp f(x) với một hàm cụ thể (như x, x^2) nếu vẫn giữ đúng mức độ nhận thức.
+    3. Cấu trúc: Trình bày rõ ràng từng câu hỏi kèm 4 đáp án trắc nghiệm A, B, C, D. Đảm bảo các đáp án nhiễu (distractors) được tính toán dựa trên các lỗi sai thường gặp của học sinh.
+    ` : ''}
+
+    QUY TẮC XỬ LÝ CÔNG THỨC TOÁN (Latex) - BẮT BUỘC:
+    - CẤU TRÚC: \`\${\` công thức \`}\$\` (Mở bằng \`\${\` và ĐÓNG bằng \`}\$\`)
+    - MAX, MIN, LIM: Dùng \\underset...{\\mathop...} (Ví dụ: \`\${ \\underset{[a;b]}{\\mathop{\\max }}\\, y }\$\`)
+    - TÍCH PHÂN: Dùng \\limits (Ví dụ: \`\${ \\int\\limits_{0}^{1}{x dx} }\$\`)
+    - DẤU NGOẶC: Dùng \\left và \\right (Ví dụ: \`\${ \\left( \\frac{x+1}{x-1} \\right) }\$\`)
+    - KÝ HIỆU ĐỘ: Dùng \\circ (Ví dụ: \`\${ 45\\circ }\$\`)
+    - SỐ ÂM: Đóng gói thành công thức (Ví dụ: \`\${ -2 }\$\`)
+
+    XỬ LÝ HÌNH VẼ/BẢNG BIỂU:
+    - Nếu là chuyển đổi: Chèn tag \`[[CHÈN_HÌNH]]\` tại vị trí có hình/bảng.
+    - Nếu là tạo câu hỏi tương tự: Mô tả ngắn gọn hình vẽ cần có (Ví dụ: [Hình vẽ: Đồ thị hàm số bậc 3 có 2 điểm cực trị]) nếu câu hỏi mới cần hình.
+
+    ĐỊNH DẠNG ĐẦU RA:
+    - Trình bày sạch sẽ, dễ đọc.
+    - Không dùng in đậm Markdown cho "Câu 1", "Câu 2".
+  `;
+
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-flash-preview',
       contents: {
         parts: [
           {
@@ -25,68 +65,7 @@ const processFileWithGemini = async (fileData: FileData): Promise<string> => {
             },
           },
           {
-            text: `
-              Bạn là công cụ OCR chuyên nghiệp chuyển đổi đề thi Toán sang văn bản Word chuẩn nhất.
-
-              NHIỆM VỤ:
-              1. Chuyển đổi toàn bộ nội dung ảnh sang text.
-              
-              2. XỬ LÝ CÔNG THỨC TOÁN (Latex):
-                 - Bắt buộc đặt trong: \`\${\` công thức \`}\$\`
-                 - Ví dụ: \`\${ x^2+1=0 }\$\`
-                 - TUYỆT ĐỐI KHÔNG dùng dấu backtick (\`) bao quanh \`\${\` và \`}\$\`.
-                 - Tuyệt đối không cách ra một khoảng. Ví dụ phải viết là: \`\${ x^2+1 = 0 }\$\` thay vì \`\${ x^2 + 1 = 0 }\$\`
-                 
-                 * QUY TẮC ĐẶC BIỆT CHO WORD (BẮT BUỘC TUÂN THỦ):
-                 
-                 A. MAX, MIN, LIM:
-                   - TUYỆT ĐỐI KHÔNG DÙNG: \\max_{...}, \\min_{...}, \\lim_{...}
-                   - BẮT BUỘC DÙNG cấu trúc \\underset...{\\mathop...}:
-                     + Max: \`\${ \\underset{[a;b]}{\\mathop{\\max }}\\, y }\$\`
-                     + Min: \`\${ \\underset{[a;b]}{\\mathop{\\min }}\\, y }\$\`
-                     + Lim: \`\${ \\underset{x \\to +\\infty}{\\mathop{\\lim }}\\, f(x) }\$\`
-
-                 B. TÍCH PHÂN (INTEGRAL):
-                   - BẮT BUỘC thêm \\limits sau \\int để cận nằm chính xác trên/dưới.
-                   - Ví dụ ĐÚNG: \`\${ \\int\\limits_{0}^{1}{x dx} }\$\`
-                   - Sai: \\int_{0}^{1}
-
-                 C. DẤU NGOẶC (BRACKETS):
-                   - BẮT BUỘC dùng \\left và \\right để ngoặc tự co giãn theo nội dung bên trong.
-                   - Ví dụ: \`\${ \\left( \\frac{x+1}{x-1} \\right) }\$\` thay vì ( ... )
-                   - Áp dụng cho cả ngoặc tròn (), ngoặc vuông [], ngoặc nhọn {}.
-
-                 D. KÝ HIỆU ĐỘ (DEGREE):
-                   - Viết trực tiếp \\circ sau số, KHÔNG dùng mũ ^.
-                   - Ví dụ ĐÚNG: \`\${ 45\\circ }\$\`
-                   - Sai: 45^\\circ hay 45^{\\circ}
-                 
-                 E. TÊN HÌNH HỌC: 
-                   - Các ký hiệu tên hình như S.ABCD, A'B'C', (SAB)... phải được coi là công thức toán.
-                   - Ví dụ: \`\${ S.ABCD }\$\`, \`\${ (SAB) }\$\`.
-
-                F. SỐ ÂM (NEGATIVE NUMBERS):
-                   - Các số âm đứng riêng lẻ (đặc biệt trong các đáp án A, B, C, D) PHẢI được đóng gói thành công thức toán để dấu trừ hiển thị đúng là dấu trừ toán học.
-                   - Ví dụ: thay vì viết "-2", hãy viết \`\${ -2 }\$\`.
-                   - Ví dụ: A. \`\${ -5 }\$\`
-                   - Áp dụng cho cả phân số âm, số thập phân âm.
-
-              3. XỬ LÝ HÌNH VẼ, ĐỒ THỊ VÀ BẢNG BIỂU (QUAN TRỌNG):
-                 - Khi gặp:
-                   + Hình vẽ hình học
-                   + Đồ thị hàm số
-                   + Bảng biến thiên
-                   + BẢNG SỐ LIỆU / BẢNG THỐNG KÊ (TABLE)
-                 - TUYỆT ĐỐI KHÔNG cố gắng chuyển đổi thành text hay Markdown Table.
-                 - HÃY chèn tag sau vào đúng vị trí đó để người dùng cắt ảnh:
-                 \`[[CHÈN_HÌNH]]\`
-                 - Nhắc lại: Bảng biểu (Table) cũng coi là hình ảnh.
-
-              4. ĐỊNH DẠNG:
-                 - Giữ nguyên cấu trúc Câu 1, Câu 2...
-                 - TUYỆT ĐỐI KHÔNG dùng định dạng in đậm Markdown (\`**\`) cho chữ "Câu 1", "Câu 2"... Chỉ viết text thường.
-                 - Các đáp án trắc nghiệm A, B, C, D nên xuống dòng.
-            `
+            text: systemPrompt
           }
         ]
       }
@@ -95,7 +74,7 @@ const processFileWithGemini = async (fileData: FileData): Promise<string> => {
     return response.text || "";
   } catch (error) {
     console.error("Gemini API Error:", error);
-    throw new Error("Không thể xử lý file. Vui lòng thử lại sau.");
+    throw new Error("Không thể xử lý yêu cầu. Vui lòng thử lại sau.");
   }
 };
 
