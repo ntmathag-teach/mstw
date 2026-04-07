@@ -73,7 +73,7 @@ const App: React.FC = () => {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                 </span>
-               <span className="text-xs font-semibold text-slate-600">Gemini 3.0 Flash</span>
+               <span className="text-xs font-semibold text-slate-600">Power by Gemma 4 31b</span>
             </div>
           </div>
         </div>
